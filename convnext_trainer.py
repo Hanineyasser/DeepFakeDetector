@@ -5,6 +5,7 @@ from pathlib import Path
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import transforms
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 
 from datasets.hybrid_loader import HybridDeepfakeDataset
 from lightning_modules.detector import DeepfakeDetector
@@ -100,9 +101,20 @@ def main():
         mode="max" if cfg.get("monitor_metric") == "val_balanced_acc" else "min",
     )
 
+    loggers = []
+    version = None
+    try:
+        tb_logger = TensorBoardLogger(save_dir=".", name="lightning_logs")
+        version = tb_logger.version
+        loggers.append(tb_logger)
+    except ModuleNotFoundError:
+        pass
+    loggers.append(CSVLogger(save_dir=".", name="lightning_logs", version=version))
+
     trainer = pl.Trainer(
         max_epochs=cfg["num_epochs"],
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        logger=loggers,
         callbacks=[checkpoint, early_stop],
         enable_progress_bar=True,
         log_every_n_steps=cfg.get("log_every_n_steps", 1),
