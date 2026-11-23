@@ -66,17 +66,23 @@ def main():
         replacement=True,
     )
 
+    num_workers = cfg.get("num_workers", 0)
+    use_cuda = torch.cuda.is_available()
+    loader_kwargs = {
+        "batch_size": cfg["batch_size"],
+        "num_workers": num_workers,
+        "pin_memory": use_cuda,
+        "persistent_workers": num_workers > 0,
+    }
     train_loader = DataLoader(
         train_dataset,
-        batch_size=cfg["batch_size"],
         sampler=sampler,
-        num_workers=0,
+        **loader_kwargs,
     )
     val_loader = DataLoader(
         val_dataset,
-        batch_size=cfg["batch_size"],
         shuffle=False,
-        num_workers=0,
+        **loader_kwargs,
     )
 
     backbone = build_convnext_tiny(pretrained=True)
@@ -111,9 +117,15 @@ def main():
         pass
     loggers.append(CSVLogger(save_dir=".", name="lightning_logs", version=version))
 
+    default_precision = (
+        "bf16-mixed"
+        if (use_cuda and torch.cuda.is_bf16_supported())
+        else ("16-mixed" if use_cuda else "32-true")
+    )
     trainer = pl.Trainer(
         max_epochs=cfg["num_epochs"],
-        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        accelerator="gpu" if use_cuda else "cpu",
+        precision=cfg.get("precision", default_precision),
         logger=loggers,
         callbacks=[checkpoint, early_stop],
         enable_progress_bar=True,

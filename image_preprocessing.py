@@ -1,19 +1,28 @@
+from functools import lru_cache
+
 import cv2
 import numpy as np
 from PIL import Image
 
 
-def crop_largest_face(image):
-    """Return a square crop around the largest detected face, or the full image."""
-    rgb = np.asarray(image.convert("RGB"))
-    gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+@lru_cache(maxsize=1)
+def _get_face_cascade():
     cascade_class = getattr(cv2, "CascadeClassifier", None)
     if cascade_class is None:
-        return image
-
-    face_cascade = cascade_class(
+        return None
+    return cascade_class(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
+
+
+def crop_largest_face(image):
+    """Return a square crop around the largest detected face, or the full image."""
+    face_cascade = _get_face_cascade()
+    if face_cascade is None:
+        return image
+
+    rgb = np.asarray(image.convert("RGB"))
+    gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
     try:
         faces = face_cascade.detectMultiScale(
             gray,
