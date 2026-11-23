@@ -1,21 +1,12 @@
 import torch
 from torchvision import transforms
-from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 from PIL import Image
 import argparse
+from convnext_model import load_convnext_checkpoint
 
 # Load your trained model
-def load_model(model_path="models/best_model.pt"):
-    weights = EfficientNet_B0_Weights.IMAGENET1K_V1
-    model = efficientnet_b0(weights=weights)
-    in_features = model.classifier[1].in_features
-    model.classifier = torch.nn.Sequential(
-        torch.nn.Dropout(0.4),
-        torch.nn.Linear(in_features, 2)
-    )
-    model.load_state_dict(torch.load(model_path, map_location="cpu"))
-    model.eval()
-    return model
+def load_model(model_path="models/convnext_tiny_best.ckpt"):
+    return load_convnext_checkpoint(model_path)
 
 # Preprocess and classify image
 def predict_image(image_path, model):

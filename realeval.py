@@ -4,13 +4,11 @@ import cv2
 from PIL import Image
 import numpy as np
 from torchvision import transforms
-from torchvision.models import efficientnet_b0
+from convnext_model import load_convnext_checkpoint
+from image_preprocessing import crop_largest_face
 
 # === Load model ===
-model = efficientnet_b0()
-model.classifier[1] = torch.nn.Linear(model.classifier[1].in_features, 2)
-model.load_state_dict(torch.load("models/best_model-v2.pt", map_location="cpu"))
-model.eval()
+model = load_convnext_checkpoint("models/convnext_tiny_best.ckpt")
 
 # === Preprocessing with optional noise ===
 def distort(image, simulate=True):
@@ -44,15 +42,7 @@ def evaluate(folder="realworld_samples/", simulate_noise=True):
         try:
             if file.lower().endswith((".jpg", ".jpeg", ".png")):
                 image = Image.open(path).convert("RGB")
-                tensor = distort(image, simulate=simulate_noise)
-            elif file.lower().endswith((".mp4", ".mov")):
-                cap = cv2.VideoCapture(path)
-                ret, frame = cap.read()
-                cap.release()
-                if not ret:
-                    print(f"{file}: ❌ Error reading video")
-                    continue
-                image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                image = crop_largest_face(image)
                 tensor = distort(image, simulate=simulate_noise)
             else:
                 print(f"{file}: Unsupported type")

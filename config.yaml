@@ -1,19 +1,25 @@
 lr: 0.0001
 batch_size: 4
-num_epochs: 1
+num_epochs: 10
 
 train_paths:
-  - C:/Datasets/1000_videos/train #train set path
-  - 
+    - 'C:\Users\DELL\.cache\kagglehub\datasets\xhlulu\140k-real-and-fake-faces\versions\2\real_vs_fake\real-vs-fake\train'
 
 val_paths:
-  - C:/Datasets/1000_videos/validation # validation set path
-  - 
+    - 'C:\Users\DELL\.cache\kagglehub\datasets\xhlulu\140k-real-and-fake-faces\versions\2\real_vs_fake\real-vs-fake\valid'
 
-early_stopping_patience: 3  # Stop training if val_loss doesn’t improve after 3 epochs
-scheduler_factor: 0.5        # LR drops by half if stuck
-scheduler_patience: 2        # Wait 2 epochs before adjusting LR
-monitor_metric: val_loss     # Metric to monitor for callbacks
+early_stopping_patience: 3
+scheduler_factor: 0.5
+scheduler_patience: 2
+monitor_metric: val_balanced_acc
 
-log_every_n_steps: 1         # Show updates each batch
-save_top_k: 1                # Only keep the best model
+log_every_n_steps: 1
+save_top_k: 1
+
+# Set this to "models/last.ckpt" to continue the most recently saved checkpoint.
+# Leave as null to start a fresh training run.
+resume_from_checkpoint: null
+
+# Save the recovery checkpoint every N training batches.
+# This limits how much progress is lost if training is interrupted.
+checkpoint_every_n_steps: 500
