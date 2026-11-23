@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from pathlib import Path
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import transforms
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, TQDMProgressBar
 from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 
 from datasets.hybrid_loader import HybridDeepfakeDataset
@@ -122,14 +122,15 @@ def main():
         if (use_cuda and torch.cuda.is_bf16_supported())
         else ("16-mixed" if use_cuda else "32-true")
     )
+    progress_bar = TQDMProgressBar(refresh_rate=cfg.get("log_every_n_steps", 50))
     trainer = pl.Trainer(
         max_epochs=cfg["num_epochs"],
         accelerator="gpu" if use_cuda else "cpu",
         precision=cfg.get("precision", default_precision),
         logger=loggers,
-        callbacks=[checkpoint, early_stop],
+        callbacks=[checkpoint, early_stop, progress_bar],
         enable_progress_bar=True,
-        log_every_n_steps=cfg.get("log_every_n_steps", 1),
+        log_every_n_steps=cfg.get("log_every_n_steps", 50),
     )
 
     resume_path = cfg.get("resume_from_checkpoint")
