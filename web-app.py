@@ -4,9 +4,6 @@ import mimetypes
 from PIL import Image
 from torchvision import transforms
 from convnext_model import load_convnext_checkpoint
-from image_preprocessing import crop_largest_face
-
-UNCERTAINTY_THRESHOLD = 0.80
 
 # === Load Model ===
 def load_model():
@@ -32,38 +29,30 @@ def predict_file(file_obj):
 
     if mime and mime.startswith("image"):
         img = Image.open(path).convert("RGB")
-        img = crop_largest_face(img)
         tensor = preprocess(img).unsqueeze(0)
         with torch.no_grad():
             out = model(tensor)
             probs = torch.softmax(out, dim=1)[0]
             conf, pred = torch.max(probs, dim=0)
-        confidence = conf.item()
-        if confidence < UNCERTAINTY_THRESHOLD:
-            label = "🟡 Inconclusive"
-        else:
-            label = "🟢 Real" if pred.item() == 0 else "🔴 Deepfake"
-        return (
-            f"{label}",
-            f"{confidence * 100:.2f}%",
-            img,
-        )
+        label = "🟢 Real" if pred.item() == 0 else "🔴 Deepfake"
+        return label, f"{conf.item()*100:.2f}%", img
 
     else:
         return "Unsupported file type", "", None
 
 # === Gradio UI ===
-with gr.Blocks(title="Deepfake Image Detector") as demo:
-    gr.Markdown("## 🧠 Deepfake Image Detector\nDrop in an image.")
+with gr.Blocks(title="Deepfake Detector") as demo:
+    gr.Markdown("## 🧠 Deepfake Detector\nDrop in an image to analyze authenticity.")
 
     file_input = gr.File(
-        label="Drop The Image Here",
+        label="Drop File Here",
         file_types=[".jpg", ".jpeg", ".png"],
     )
     
 
     with gr.Row():
         prediction = gr.Textbox(label="Prediction", interactive=False)
+        confidence = gr.Textbox(label="Confidence (%)", interactive=False)
 
     preview = gr.Image(label="Preview", interactive=False)
 
@@ -73,7 +62,7 @@ with gr.Blocks(title="Deepfake Image Detector") as demo:
     file_input.change(
         fn=handle_input,
         inputs=file_input,
-        outputs=[prediction, preview]
+        outputs=[prediction, confidence, preview]
     )
 
 demo.launch()

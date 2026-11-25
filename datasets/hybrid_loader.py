@@ -9,21 +9,29 @@ class HybridDeepfakeDataset(Dataset):
         self.labels = []
 
         class_map = {'real': 0, 'fake': 1}
+        valid_exts = ('.jpg', '.jpeg', '.png', '.webp')
 
         for path, override_label in sources:
+            if not os.path.isdir(path):
+                continue
             if override_label is None:
-                for label in ['real', 'fake']:
-                    subdir = os.path.join(path, label)
-                    if os.path.isdir(subdir):
-                        for fname in os.listdir(subdir):
-                            if fname.lower().endswith(('.jpg', '.jpeg', '.png')):
-                                self.image_paths.append(os.path.join(subdir, fname))
-                                self.labels.append(class_map[label])
+                for entry in os.scandir(path):
+                    if not entry.is_dir():
+                        continue
+                    mapped = class_map.get(entry.name.lower())
+                    if mapped is None:
+                        continue
+                    for root, _, files in os.walk(entry.path):
+                        for fname in files:
+                            if fname.lower().endswith(valid_exts):
+                                self.image_paths.append(os.path.join(root, fname))
+                                self.labels.append(mapped)
             else:
-                for fname in os.listdir(path):
-                    if fname.lower().endswith(('.jpg', '.jpeg', '.png')):
-                        self.image_paths.append(os.path.join(path, fname))
-                        self.labels.append(override_label)
+                for root, _, files in os.walk(path):
+                    for fname in files:
+                        if fname.lower().endswith(valid_exts):
+                            self.image_paths.append(os.path.join(root, fname))
+                            self.labels.append(override_label)
 
     def __len__(self):
         return len(self.image_paths)
